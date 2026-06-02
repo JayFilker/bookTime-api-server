@@ -2,9 +2,11 @@
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import routes from './routes';
 import { errorMiddleware } from './middlewares/error.middleware';
 import { loggerMiddleware } from './middlewares/logger.middleware';
+import v2Routes from './v2/routes';
 
 const app = express();
 
@@ -23,6 +25,9 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 
 app.use('/api', routes);
+
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/v2', v2Routes);
 
 app.use(errorMiddleware);
 

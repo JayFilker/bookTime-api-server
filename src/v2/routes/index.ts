@@ -1,9 +1,11 @@
 import { Router } from 'express';
+import authRoutes from './auth.routes';
 
 const router = Router();
 
-// 各模块路由在后续阶段逐步注册：
-// router.use('/auth', authRoutes);
+router.use('/auth', authRoutes);
+
+// 后续阶段逐步注册：
 // router.use('/users', userRoutes);
 // router.use('/favorites', favoriteRoutes);
 // router.use('/posts', postRoutes);
