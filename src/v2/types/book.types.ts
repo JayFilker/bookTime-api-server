@@ -6,9 +6,17 @@ export interface BookComment {
   createdAt: string;
 }
 
+export interface BookCommentImage {
+  id: number;
+  commentId: number;
+  path: string;
+  sort: number;
+}
+
 export interface BookCommentWithMeta extends BookComment {
   likeCount: number;
   isLiked: boolean;
+  images: BookCommentImage[];
   username: string;
   nickname: string | null;
   avatar: string | null;

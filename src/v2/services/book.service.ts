@@ -2,6 +2,7 @@ import db from '../db';
 import {
   BookComment,
   BookCommentWithMeta,
+  BookCommentImage,
   BookRatingStats,
 } from '../types/book.types';
 
@@ -12,12 +13,28 @@ interface CommentRow extends BookComment {
   likeCount: number;
 }
 
+function getCommentImages(commentIds: number[]): Map<number, BookCommentImage[]> {
+  const map = new Map<number, BookCommentImage[]>();
+  if (commentIds.length === 0) return map;
+  const placeholders = commentIds.map(() => '?').join(',');
+  const imgs = db
+    .prepare(`SELECT * FROM book_comment_images WHERE commentId IN (${placeholders}) ORDER BY commentId, sort`)
+    .all(...commentIds) as BookCommentImage[];
+  imgs.forEach(img => {
+    const arr = map.get(img.commentId) ?? [];
+    arr.push(img);
+    map.set(img.commentId, arr);
+  });
+  return map;
+}
+
 export class BookService {
   // 发布书评
   static addComment(
     userId: number,
     bookId: string,
-    content: string
+    content: string,
+    imagePaths: string[] = []
   ): { success: boolean; comment?: BookCommentWithMeta; message: string } {
     try {
       const result = db
@@ -25,6 +42,12 @@ export class BookService {
         .run(userId, bookId, content);
 
       const id = result.lastInsertRowid as number;
+
+      if (imagePaths.length > 0) {
+        const imgStmt = db.prepare('INSERT INTO book_comment_images (commentId, path, sort) VALUES (?, ?, ?)');
+        imagePaths.forEach((path, i) => imgStmt.run(id, path, i));
+      }
+
       const row = db
         .prepare(
           `SELECT bc.id, bc.userId, bc.bookId, bc.content, bc.createdAt,
@@ -35,10 +58,14 @@ export class BookService {
         )
         .get(id) as Omit<CommentRow, 'likeCount'>;
 
+      const images = imagePaths.map((path, i) => ({
+        id: 0, commentId: id, path, sort: i,
+      }));
+
       return {
         success: true,
         message: '发布成功',
-        comment: { ...row, likeCount: 0, isLiked: false },
+        comment: { ...row, likeCount: 0, isLiked: false, images },
       };
     } catch (error) {
       console.error('添加书评失败:', error);
@@ -76,14 +103,12 @@ export class BookService {
         )
         .all(bookId, pageSize, offset) as CommentRow[];
 
-      if (!currentUserId) {
-        return { list: rows.map(r => ({ ...r, isLiked: false })), total };
-      }
+      const ids = rows.map(r => r.id);
+      const imageMap = getCommentImages(ids);
 
       const likedSet = new Set<number>();
-      if (rows.length > 0) {
-        const placeholders = rows.map(() => '?').join(',');
-        const ids = rows.map(r => r.id);
+      if (currentUserId && ids.length > 0) {
+        const placeholders = ids.map(() => '?').join(',');
         const liked = db
           .prepare(
             `SELECT commentId FROM book_comment_likes WHERE userId = ? AND commentId IN (${placeholders})`
@@ -93,7 +118,11 @@ export class BookService {
       }
 
       return {
-        list: rows.map(r => ({ ...r, isLiked: likedSet.has(r.id) })),
+        list: rows.map(r => ({
+          ...r,
+          isLiked: likedSet.has(r.id),
+          images: imageMap.get(r.id) ?? [],
+        })),
         total,
       };
     } catch (error) {

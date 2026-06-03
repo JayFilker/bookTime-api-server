@@ -3,7 +3,7 @@ import { BookService } from '../services/book.service';
 import { AddCommentRequest, SetRatingRequest } from '../types/book.types';
 
 export class BookController {
-  // 发布书评
+  // 发布书评（支持图片）
   static addComment(req: Request, res: Response): void {
     try {
       const userId = res.locals['userId'] as number;
@@ -19,7 +19,10 @@ export class BookController {
         return;
       }
 
-      const result = BookService.addComment(userId, bookId, content.trim());
+      const files = (req.files as Express.Multer.File[]) ?? [];
+      const imagePaths = files.map(f => `/uploads/comments/${f.filename}`);
+
+      const result = BookService.addComment(userId, bookId, content.trim(), imagePaths);
       if (!result.success) {
         res.status(500).json({ code: 500, message: result.message });
         return;
