@@ -9,6 +9,41 @@ interface PostRow extends Post {
   imageCount: number;
 }
 
+function buildPostMeta(
+  rows: PostRow[],
+  currentUserId?: number
+): PostWithMeta[] {
+  const postIds = rows.map(r => r.id);
+
+  const imageMap = new Map<number, PostImage[]>();
+  if (postIds.length > 0) {
+    const ph = postIds.map(() => '?').join(',');
+    const imgs = db
+      .prepare(`SELECT * FROM post_images WHERE postId IN (${ph}) ORDER BY postId, sort`)
+      .all(...postIds) as PostImage[];
+    imgs.forEach(img => {
+      const arr = imageMap.get(img.postId) ?? [];
+      arr.push(img);
+      imageMap.set(img.postId, arr);
+    });
+  }
+
+  const likedSet = new Set<number>();
+  if (currentUserId && postIds.length > 0) {
+    const ph = postIds.map(() => '?').join(',');
+    const liked = db
+      .prepare(`SELECT postId FROM post_likes WHERE userId = ? AND postId IN (${ph})`)
+      .all(currentUserId, ...postIds) as { postId: number }[];
+    liked.forEach(l => likedSet.add(l.postId));
+  }
+
+  return rows.map(r => ({
+    ...r,
+    isLiked: likedSet.has(r.id),
+    images: imageMap.get(r.id) ?? [],
+  }));
+}
+
 export class PostService {
   // 发布动态
   static createPost(
@@ -82,40 +117,7 @@ export class PostService {
         )
         .all(pageSize, offset) as PostRow[];
 
-      const postIds = rows.map(r => r.id);
-
-      // 批量查询图片
-      const imageMap = new Map<number, PostImage[]>();
-      if (postIds.length > 0) {
-        const placeholders = postIds.map(() => '?').join(',');
-        const imgs = db
-          .prepare(`SELECT * FROM post_images WHERE postId IN (${placeholders}) ORDER BY postId, sort`)
-          .all(...postIds) as PostImage[];
-        imgs.forEach(img => {
-          const arr = imageMap.get(img.postId) ?? [];
-          arr.push(img);
-          imageMap.set(img.postId, arr);
-        });
-      }
-
-      // 批量查询点赞
-      const likedSet = new Set<number>();
-      if (currentUserId && postIds.length > 0) {
-        const placeholders = postIds.map(() => '?').join(',');
-        const liked = db
-          .prepare(`SELECT postId FROM post_likes WHERE userId = ? AND postId IN (${placeholders})`)
-          .all(currentUserId, ...postIds) as { postId: number }[];
-        liked.forEach(l => likedSet.add(l.postId));
-      }
-
-      return {
-        list: rows.map(r => ({
-          ...r,
-          isLiked: likedSet.has(r.id),
-          images: imageMap.get(r.id) ?? [],
-        })),
-        total,
-      };
+      return { list: buildPostMeta(rows, currentUserId), total };
     } catch (error) {
       console.error('获取动态列表失败:', error);
       return { list: [], total: 0 };
@@ -239,37 +241,7 @@ export class PostService {
         )
         .all(userId, pageSize, offset) as PostRow[];
 
-      const postIds = rows.map(r => r.id);
-      const imageMap = new Map<number, PostImage[]>();
-      if (postIds.length > 0) {
-        const placeholders = postIds.map(() => '?').join(',');
-        const imgs = db
-          .prepare(`SELECT * FROM post_images WHERE postId IN (${placeholders}) ORDER BY postId, sort`)
-          .all(...postIds) as PostImage[];
-        imgs.forEach(img => {
-          const arr = imageMap.get(img.postId) ?? [];
-          arr.push(img);
-          imageMap.set(img.postId, arr);
-        });
-      }
-
-      const likedSet = new Set<number>();
-      if (currentUserId && postIds.length > 0) {
-        const placeholders = postIds.map(() => '?').join(',');
-        const liked = db
-          .prepare(`SELECT postId FROM post_likes WHERE userId = ? AND postId IN (${placeholders})`)
-          .all(currentUserId, ...postIds) as { postId: number }[];
-        liked.forEach(l => likedSet.add(l.postId));
-      }
-
-      return {
-        list: rows.map(r => ({
-          ...r,
-          isLiked: likedSet.has(r.id),
-          images: imageMap.get(r.id) ?? [],
-        })),
-        total,
-      };
+      return { list: buildPostMeta(rows, currentUserId), total };
     } catch (error) {
       console.error('获取用户动态失败:', error);
       return { list: [], total: 0 };
