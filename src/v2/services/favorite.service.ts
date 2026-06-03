@@ -1,6 +1,5 @@
 import db from '../db';
 import { Favorite, FavoriteWithBook } from '../types/favorite.types';
-import axios from 'axios';
 
 export class FavoriteService {
   // 添加收藏
