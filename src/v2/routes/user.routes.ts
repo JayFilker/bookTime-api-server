@@ -14,4 +14,7 @@ router.put('/profile', requireAuth, UserController.updateProfile);
 // 上传头像
 router.post('/avatar', requireAuth, uploadAvatar.single('avatar'), UserController.uploadAvatar);
 
+// 获取个人书评列表
+router.get('/my-comments', requireAuth, UserController.getMyComments);
+
 export default router;

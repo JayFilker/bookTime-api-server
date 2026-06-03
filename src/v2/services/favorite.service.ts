@@ -1,6 +1,6 @@
 import db from '../db';
 import { Favorite, FavoriteWithBook } from '../types/favorite.types';
-import { getBookById } from '../../services/book.service';
+import { getBookSummary } from '../../services/book.service';
 
 export class FavoriteService {
   // 添加收藏
@@ -68,7 +68,7 @@ export class FavoriteService {
       const favoritesWithBooks: FavoriteWithBook[] = await Promise.all(
         favorites.map(async fav => {
           try {
-            const book = await getBookById(fav.bookId);
+            const book = await getBookSummary(fav.bookId);
             return {
               ...fav,
               book: {

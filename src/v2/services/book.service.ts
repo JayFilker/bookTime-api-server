@@ -5,6 +5,7 @@ import {
   BookCommentImage,
   BookRatingStats,
 } from '../types/book.types';
+import { withBaseUrl } from '../utils/url';
 
 interface CommentRow extends BookComment {
   username: string;
@@ -22,7 +23,7 @@ function getCommentImages(commentIds: number[]): Map<number, BookCommentImage[]>
     .all(...commentIds) as BookCommentImage[];
   imgs.forEach(img => {
     const arr = map.get(img.commentId) ?? [];
-    arr.push(img);
+    arr.push({ ...img, path: withBaseUrl(img.path) as string });
     map.set(img.commentId, arr);
   });
   return map;
@@ -59,13 +60,13 @@ export class BookService {
         .get(id) as Omit<CommentRow, 'likeCount'>;
 
       const images = imagePaths.map((path, i) => ({
-        id: 0, commentId: id, path, sort: i,
+        id: 0, commentId: id, path: withBaseUrl(path) as string, sort: i,
       }));
 
       return {
         success: true,
         message: '发布成功',
-        comment: { ...row, likeCount: 0, isLiked: false, images },
+        comment: { ...row, avatar: withBaseUrl(row.avatar), likeCount: 0, isLiked: false, images },
       };
     } catch (error) {
       console.error('添加书评失败:', error);
@@ -120,6 +121,7 @@ export class BookService {
       return {
         list: rows.map(r => ({
           ...r,
+          avatar: withBaseUrl(r.avatar),
           isLiked: likedSet.has(r.id),
           images: imageMap.get(r.id) ?? [],
         })),
@@ -225,6 +227,54 @@ export class BookService {
     } catch (error) {
       console.error('获取评分统计失败:', error);
       return { avgRating: 0, totalRatings: 0, myRating: null };
+    }
+  }
+
+  // 获取用户个人书评列表
+  static getUserComments(
+    userId: number,
+    page: number = 1,
+    pageSize: number = 20
+  ): { list: BookCommentWithMeta[]; total: number } {
+    try {
+      const { count: total } = db
+        .prepare('SELECT COUNT(*) as count FROM book_comments WHERE userId = ?')
+        .get(userId) as { count: number };
+
+      if (total === 0) return { list: [], total: 0 };
+
+      const offset = (page - 1) * pageSize;
+      const rows = db
+        .prepare(
+          `SELECT bc.id, bc.userId, bc.bookId, bc.content, bc.createdAt,
+                  u.username, u.nickname, u.avatar,
+                  COUNT(bcl.id) as likeCount
+           FROM book_comments bc
+           JOIN users u ON u.id = bc.userId
+           LEFT JOIN book_comment_likes bcl ON bcl.commentId = bc.id
+           WHERE bc.userId = ?
+           GROUP BY bc.id
+           ORDER BY bc.createdAt DESC
+           LIMIT ? OFFSET ?`
+        )
+        .all(userId, pageSize, offset) as CommentRow[];
+
+      const ids = rows.map(r => r.id);
+      const imageMap = getCommentImages(ids);
+
+      // 用户查看自己的书评，isLiked 始终为 false（自己不能给自己点赞）
+      return {
+        list: rows.map(r => ({
+          ...r,
+          avatar: withBaseUrl(r.avatar),
+          isLiked: false,
+          images: imageMap.get(r.id) ?? [],
+        })),
+        total,
+      };
+    } catch (error) {
+      console.error('获取用户书评列表失败:', error);
+      return { list: [], total: 0 };
     }
   }
 }

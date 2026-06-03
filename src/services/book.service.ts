@@ -41,6 +41,29 @@ async function fetchAllChapters(bookId: string): Promise<Chapter[]> {
   return chapters;
 }
 
+export const getBookSummary = async (id: string): Promise<Book> => {
+  const cacheKey = `book:summary:${id}`;
+  const cached = cache.get<Book>(cacheKey);
+  if (cached) return cached;
+
+  const $ = await fetchHtml(`/book/${id}/`);
+
+  const title = $('#info h1').text().trim();
+  if (!title) throw new Error('书籍不存在');
+
+  const author = $('#info p:first-of-type a').text().trim();
+  const category = $('meta[property="og:novel:category"]').attr('content') ?? '';
+  const latestChapter = $('meta[property="og:novel:latest_chapter_name"]').attr('content') ?? '';
+  const updatedAt = $('meta[property="og:novel:update_time"]').attr('content') ?? '';
+  const coverSrc = $('#fmimg img').attr('src') ?? '';
+  const cover = coverSrc.startsWith('http') ? coverSrc : `${BASE_URL}${coverSrc}`;
+  const description = $('#intro div:first-child').text().trim();
+
+  const result: Book = { id, title, author, cover, description, category, chapterCount: 0, latestChapter, updatedAt };
+  cache.set(cacheKey, result, TTL.BOOK_DETAIL);
+  return result;
+};
+
 export const getBookById = async (id: string): Promise<Book & { chapters: Chapter[] }> => {
   const cacheKey = `book:${id}`;
   const cached = cache.get<Book & { chapters: Chapter[] }>(cacheKey);

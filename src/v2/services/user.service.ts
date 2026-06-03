@@ -1,5 +1,6 @@
 import db from '../db';
 import { UserProfile, UpdateProfileRequest } from '../types/user.types';
+import { withBaseUrl } from '../utils/url';
 
 export class UserService {
   // 获取用户资料
@@ -11,7 +12,20 @@ export class UserService {
     `);
 
     const user = stmt.get(userId) as UserProfile | undefined;
-    return user || null;
+    if (!user) return null;
+
+    // 获取统计信息
+    const postsCount = db.prepare('SELECT COUNT(*) as count FROM posts WHERE userId = ?').get(userId) as { count: number };
+    const favoritesCount = db.prepare('SELECT COUNT(*) as count FROM favorites WHERE userId = ?').get(userId) as { count: number };
+    const commentsCount = db.prepare('SELECT COUNT(*) as count FROM book_comments WHERE userId = ?').get(userId) as { count: number };
+
+    return {
+      ...user,
+      avatar: withBaseUrl(user.avatar) ?? undefined,
+      postsCount: postsCount.count,
+      favoritesCount: favoritesCount.count,
+      commentsCount: commentsCount.count
+    };
   }
 
   // 更新用户资料
