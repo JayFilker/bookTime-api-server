@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { UserService } from '../services/user.service';
+import { BookService } from '../services/book.service';
 import { UpdateProfileRequest } from '../types/user.types';
 
 export class UserController {
@@ -135,6 +136,32 @@ export class UserController {
       });
     } catch (error) {
       console.error('头像上传失败:', error);
+      res.status(500).json({
+        code: 500,
+        message: '服务器内部错误'
+      });
+    }
+  }
+
+  // 获取个人书评列表
+  static getMyComments(req: Request, res: Response): void {
+    try {
+      const userId = res.locals['userId'] as number;
+      let page = parseInt(req.query['page'] as string) || 1;
+      let pageSize = parseInt(req.query['pageSize'] as string) || 20;
+
+      if (page < 1) page = 1;
+      if (pageSize < 1 || pageSize > 100) pageSize = 20;
+
+      const { list, total } = BookService.getUserComments(userId, page, pageSize);
+
+      res.json({
+        code: 200,
+        message: '获取成功',
+        data: { list, total, page, pageSize }
+      });
+    } catch (error) {
+      console.error('获取个人书评列表失败:', error);
       res.status(500).json({
         code: 500,
         message: '服务器内部错误'

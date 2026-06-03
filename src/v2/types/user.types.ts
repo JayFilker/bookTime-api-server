@@ -5,6 +5,10 @@ export interface UserProfile {
   avatar?: string;
   bio?: string;
   createdAt: string;
+  // 统计信息
+  postsCount?: number;
+  favoritesCount?: number;
+  commentsCount?: number;
 }
 
 export interface UpdateProfileRequest {

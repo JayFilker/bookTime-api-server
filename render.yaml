@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: novel-api-server
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: BASE_URL
+        sync: false  # 部署后手动填入 Render 分配的域名，如 https://novel-api-server.onrender.com

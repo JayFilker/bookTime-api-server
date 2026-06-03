@@ -11,4 +11,5 @@ if (!jwtSecret) {
 export const v2Config = {
   jwtSecret,
   jwtExpiresIn,
+  baseUrl: (process.env['BASE_URL'] ?? 'http://localhost:3000').replace(/\/$/, ''),
 };

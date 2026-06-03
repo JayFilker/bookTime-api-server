@@ -1,7 +1,9 @@
+import fs from 'fs';
 import Database from 'better-sqlite3';
 import path from 'path';
 
 const DB_PATH = path.join(process.cwd(), 'data', 'app.db');
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 const db = new Database(DB_PATH);
 
@@ -30,6 +32,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS posts (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
     userId    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title     TEXT,
     content   TEXT    NOT NULL,
     createdAt TEXT    NOT NULL DEFAULT (datetime('now'))
   );
@@ -77,6 +80,20 @@ db.exec(`
     rating  INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
     UNIQUE(userId, bookId)
   );
+
+  CREATE TABLE IF NOT EXISTS post_comments (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    postId    INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    userId    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content   TEXT    NOT NULL,
+    createdAt TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
 `);
+
+// 迁移：为已存在的 posts 表补加 title 列
+const postCols = db.pragma('table_info(posts)') as { name: string }[];
+if (!postCols.some(c => c.name === 'title')) {
+  db.exec('ALTER TABLE posts ADD COLUMN title TEXT');
+}
 
 export default db;

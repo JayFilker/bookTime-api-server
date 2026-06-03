@@ -23,4 +23,13 @@ router.delete('/:postId', requireAuth, PostController.deletePost);
 // 点赞/取消点赞
 router.post('/:postId/like', requireAuth, PostController.toggleLike);
 
+// 评论列表（无需登录）
+router.get('/:postId/comments', PostController.getPostComments);
+
+// 发布评论
+router.post('/:postId/comments', requireAuth, PostController.createComment);
+
+// 删除评论
+router.delete('/:postId/comments/:commentId', requireAuth, PostController.deleteComment);
+
 export default router;
