@@ -105,32 +105,20 @@ export class FavoriteController {
   }
 
   // 获取收藏列表
-  static getFavoriteList(req: Request, res: Response): void {
+  static async getFavoriteList(req: Request, res: Response): Promise<void> {
     try {
       const userId = res.locals['userId'] as number;
 
-      // 解析分页参数
       let page = parseInt(req.query.page as string) || 1;
       let pageSize = parseInt(req.query.pageSize as string) || 20;
-
-      // 验证分页参数
       if (page < 1) page = 1;
       if (pageSize < 1 || pageSize > 100) pageSize = 20;
 
-      const { list, total } = FavoriteService.getFavoriteList(userId, page, pageSize);
+      const { list, total } = await FavoriteService.getFavoriteList(userId, page, pageSize);
 
-      const response: FavoriteListResponse = {
-        list,
-        total,
-        page,
-        pageSize
-      };
+      const response: FavoriteListResponse = { list, total, page, pageSize };
 
-      res.json({
-        code: 200,
-        message: '获取成功',
-        data: response
-      });
+      res.json({ code: 200, message: '获取成功', data: response });
     } catch (error) {
       console.error('获取收藏列表失败:', error);
       res.status(500).json({

@@ -1,5 +1,6 @@
 import db from '../db';
 import { Favorite, FavoriteWithBook } from '../types/favorite.types';
+import { getBookById } from '../../services/book.service';
 
 export class FavoriteService {
   // 添加收藏
@@ -46,40 +47,45 @@ export class FavoriteService {
   }
 
   // 获取收藏列表
-  static getFavoriteList(userId: number, page: number = 1, pageSize: number = 20): {
+  static async getFavoriteList(userId: number, page: number = 1, pageSize: number = 20): Promise<{
     list: FavoriteWithBook[];
     total: number;
-  } {
+  }> {
     try {
-      // 获取总数
-      const countStmt = db.prepare('SELECT COUNT(*) as count FROM favorites WHERE userId = ?');
-      const { count: total } = countStmt.get(userId) as { count: number };
+      const { count: total } = db
+        .prepare('SELECT COUNT(*) as count FROM favorites WHERE userId = ?')
+        .get(userId) as { count: number };
 
-      if (total === 0) {
-        return { list: [], total: 0 };
-      }
+      if (total === 0) return { list: [], total: 0 };
 
-      // 获取分页数据
       const offset = (page - 1) * pageSize;
-      const listStmt = db.prepare(`
-        SELECT id, userId, bookId, createdAt
-        FROM favorites
-        WHERE userId = ?
-        ORDER BY createdAt DESC
-        LIMIT ? OFFSET ?
-      `);
+      const favorites = db
+        .prepare(
+          'SELECT id, userId, bookId, createdAt FROM favorites WHERE userId = ? ORDER BY createdAt DESC LIMIT ? OFFSET ?'
+        )
+        .all(userId, pageSize, offset) as Favorite[];
 
-      const favorites = listStmt.all(userId, pageSize, offset) as Favorite[];
-
-      // 为每个收藏获取书籍信息
-      const favoritesWithBooks: FavoriteWithBook[] = [];
-      for (const favorite of favorites) {
-        const bookInfo = this.getBookInfo(favorite.bookId);
-        favoritesWithBooks.push({
-          ...favorite,
-          book: bookInfo
-        });
-      }
+      const favoritesWithBooks: FavoriteWithBook[] = await Promise.all(
+        favorites.map(async fav => {
+          try {
+            const book = await getBookById(fav.bookId);
+            return {
+              ...fav,
+              book: {
+                id: book.id,
+                title: book.title,
+                author: book.author,
+                cover: book.cover,
+                category: book.category,
+                latestChapter: book.latestChapter,
+                updatedAt: book.updatedAt,
+              },
+            };
+          } catch {
+            return { ...fav, book: { id: fav.bookId, title: `书籍${fav.bookId}`, author: '', category: '' } };
+          }
+        })
+      );
 
       return { list: favoritesWithBooks, total };
     } catch (error) {
@@ -96,28 +102,6 @@ export class FavoriteService {
     } catch (error) {
       console.error('检查收藏状态失败:', error);
       return false;
-    }
-  }
-
-  // 获取书籍信息（调用v1接口）
-  private static getBookInfo(bookId: string): any {
-    try {
-      // 这里应该调用v1的书籍详情接口获取书籍信息
-      // 为了简化，暂时返回基础信息，实际项目中应该调用书籍服务
-      return {
-        id: bookId,
-        title: `书籍${bookId}`,
-        author: '未知作者',
-        category: '未知分类'
-      };
-    } catch (error) {
-      console.error('获取书籍信息失败:', error);
-      return {
-        id: bookId,
-        title: `书籍${bookId}`,
-        author: '未知作者',
-        category: '未知分类'
-      };
     }
   }
 
