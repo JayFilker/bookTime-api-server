@@ -17,7 +17,7 @@ export class UserService {
   // 更新用户资料
   static updateUserProfile(userId: number, data: UpdateProfileRequest): boolean {
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: (string | number)[] = [];
 
     if (data.nickname !== undefined) {
       fields.push('nickname = ?');
