@@ -4,6 +4,9 @@ import { Book } from '../types/book.types';
 import { SearchQuery } from '../types/search.types';
 import { BASE_URL } from '../utils/scraper';
 import { cache, TTL } from '../utils/cache';
+import { store } from '../data/store';
+
+const IS_PROD = process.env.NODE_ENV !== 'development';
 
 const mobileHttp = axios.create({
   baseURL: 'http://m.bqge.org',
@@ -46,6 +49,15 @@ const fetchAndParseSearch = async (keyword: string): Promise<Book[]> => {
 const pendingRequests = new Map<string, Promise<Book[]>>();
 
 export const search = async (query: SearchQuery): Promise<{ list: Book[]; total: number; page: number; pageSize: number }> => {
+  const page = query.page ?? 1;
+  const pageSize = query.pageSize ?? 10;
+
+  if (IS_PROD) {
+    const matched = store.searchBooks(query.keyword);
+    const start = (page - 1) * pageSize;
+    return { list: matched.slice(start, start + pageSize), total: matched.length, page, pageSize };
+  }
+
   const cacheKey = `search:${query.keyword}`;
   let books = cache.get<Book[]>(cacheKey);
 
@@ -80,8 +92,6 @@ export const search = async (query: SearchQuery): Promise<{ list: Book[]; total:
     books = await pending;
   }
 
-  const page = query.page ?? 1;
-  const pageSize = query.pageSize ?? 10;
   const start = (page - 1) * pageSize;
   return { list: books.slice(start, start + pageSize), total: books.length, page, pageSize };
 };

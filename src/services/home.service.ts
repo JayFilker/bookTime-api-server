@@ -2,6 +2,9 @@ import { CheerioAPI } from 'cheerio';
 import { HomeBook, HomeData } from '../types/home.types';
 import { fetchHtml } from '../utils/scraper';
 import { cache, TTL } from '../utils/cache';
+import { store } from '../data/store';
+
+const IS_PROD = process.env.NODE_ENV !== 'development';
 
 const CACHE_KEY = 'home:featured_and_new';
 
@@ -28,6 +31,8 @@ function parseSectionBooks($: CheerioAPI, sectionTitle: string): HomeBook[] {
 }
 
 export const getHomeData = async (): Promise<HomeData> => {
+  if (IS_PROD) return store.getHomeData();
+
   const cached = cache.get<HomeData>(CACHE_KEY);
   if (cached) return cached;
 

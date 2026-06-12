@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { UserService } from '../services/user.service';
 import { BookService } from '../services/book.service';
 import { UpdateProfileRequest } from '../types/user.types';
+import { withBaseUrl } from '../utils/url';
 
 export class UserController {
   // 获取用户资料
@@ -131,7 +132,7 @@ export class UserController {
         code: 200,
         message: '头像上传成功',
         data: {
-          avatar: avatarPath
+          avatar: withBaseUrl(avatarPath)
         }
       });
     } catch (error) {

@@ -2,6 +2,9 @@ import { Chapter, ChapterDetail } from '../types/chapter.types';
 import { fetchHtml, fetchMobileRaw } from '../utils/scraper';
 import { cache, TTL } from '../utils/cache';
 import * as cheerio from 'cheerio';
+import { store } from '../data/store';
+
+const IS_PROD = process.env.NODE_ENV !== 'development';
 
 const AD_PATTERNS = ['bqge.org', '请勿开启', '一秒记住', 'tianyibook', '天翼小说'];
 
@@ -36,6 +39,12 @@ async function fetchChapterPage(bookId: string, chapterId: string, page: number)
 }
 
 export const getChapterById = async (chapterId: string, bookId: string): Promise<ChapterDetail> => {
+  if (IS_PROD) {
+    const data = store.getChapterContent(bookId, chapterId);
+    if (!data) throw new Error('章节不存在');
+    return { id: chapterId, bookId, title: data.title, order: 0, content: data.content, prevChapterId: undefined, nextChapterId: undefined };
+  }
+
   const cacheKey = `chapter:${bookId}:${chapterId}`;
   const cached = cache.get<ChapterDetail>(cacheKey);
   if (cached) return cached;
@@ -73,6 +82,12 @@ export const getChaptersByBookId = async (
   page: number,
   pageSize: number,
 ): Promise<{ list: Chapter[]; total: number; page: number; pageSize: number }> => {
+  if (IS_PROD) {
+    const all = store.getChaptersByBookId(bookId);
+    const start = (page - 1) * pageSize;
+    return { list: all.slice(start, start + pageSize), total: all.length, page, pageSize };
+  }
+
   const cacheKey = `chapters:${bookId}`;
   let allChapters = cache.get<Chapter[]>(cacheKey);
 

@@ -2,6 +2,9 @@ import { Book, BookListQuery } from '../types/book.types';
 import { Chapter } from '../types/chapter.types';
 import { fetchHtml, BASE_URL } from '../utils/scraper';
 import { cache, TTL } from '../utils/cache';
+import { store } from '../data/store';
+
+const IS_PROD = process.env.NODE_ENV !== 'development';
 
 // 分类 ID 映射
 const CATEGORY_MAP: Record<string, string> = {
@@ -42,6 +45,12 @@ async function fetchAllChapters(bookId: string): Promise<Chapter[]> {
 }
 
 export const getBookSummary = async (id: string): Promise<Book> => {
+  if (IS_PROD) {
+    const book = store.getBookById(id);
+    if (!book) throw new Error('书籍不存在');
+    return book;
+  }
+
   const cacheKey = `book:summary:${id}`;
   const cached = cache.get<Book>(cacheKey);
   if (cached) return cached;
@@ -65,6 +74,13 @@ export const getBookSummary = async (id: string): Promise<Book> => {
 };
 
 export const getBookById = async (id: string): Promise<Book & { chapters: Chapter[] }> => {
+  if (IS_PROD) {
+    const book = store.getBookById(id);
+    if (!book) throw new Error('书籍不存在');
+    const chapters = store.getChaptersByBookId(id);
+    return { ...book, chapters };
+  }
+
   const cacheKey = `book:${id}`;
   const cached = cache.get<Book & { chapters: Chapter[] }>(cacheKey);
   if (cached) return cached;
@@ -92,6 +108,13 @@ export const getBookById = async (id: string): Promise<Book & { chapters: Chapte
 export const getBooks = async (query: BookListQuery): Promise<{ list: Book[]; total: number; page: number; pageSize: number }> => {
   const page = query.page ?? 1;
   const pageSize = query.pageSize ?? 20;
+
+  if (IS_PROD) {
+    const all = store.getAllBooks();
+    const filtered = query.category ? all.filter(b => b.category === query.category) : all;
+    const start = (page - 1) * pageSize;
+    return { list: filtered.slice(start, start + pageSize), total: filtered.length, page, pageSize };
+  }
 
   // 有分类时走分类页
   if (query.category && CATEGORY_MAP[query.category]) {
