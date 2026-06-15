@@ -1,15 +1,11 @@
 import axios, { AxiosInstance } from 'axios';
 import * as cheerio from 'cheerio';
-import { HttpsProxyAgent } from 'https-proxy-agent';
 
 export const BASE_URL = 'https://www.bqge.org';
 const MOBILE_BASE_URL = 'http://m.bqge.org';
 
 // 通过 Vercel 中转时的基础 URL（在 Render 环境变量中配置）
 const VERCEL_BASE_URL = process.env.VERCEL_SCRAPER_URL;
-
-const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy;
-const proxyAgent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
 
 const DESKTOP_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
@@ -35,12 +31,7 @@ const MOBILE_HEADERS = {
 };
 
 function createHttp(baseURL: string, headers: Record<string, string>): AxiosInstance {
-  return axios.create({
-    baseURL,
-    timeout: 15000,
-    headers,
-    ...(proxyAgent ? { httpAgent: proxyAgent, httpsAgent: proxyAgent } : {}),
-  });
+  return axios.create({ baseURL, timeout: 15000, headers });
 }
 
 const desktopHttp = createHttp(BASE_URL, DESKTOP_HEADERS);
