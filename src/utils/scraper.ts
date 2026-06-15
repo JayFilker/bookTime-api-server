@@ -56,15 +56,14 @@ export async function fetchMobileRaw(url: string): Promise<string> {
   return res.data;
 }
 
-// 通过 Vercel 中转获取数据，失败时降级直连
+// 通过 Vercel 中转获取数据（需在 Render 环境变量中配置 VERCEL_SCRAPER_URL）
 export async function fetchViaVercel<T>(path: string, params?: Record<string, string>): Promise<T> {
-  if (vercelHttp) {
-    try {
-      const res = await vercelHttp.get<{ ok: boolean; data: T }>(path, { params });
-      if (res.data.ok) return res.data.data;
-    } catch {
-      // 降级直连
-    }
+  if (!vercelHttp) {
+    throw new Error('VERCEL_SCRAPER_URL 未配置，无法调用 Vercel 爬虫接口');
   }
-  throw new Error('Vercel scraper not configured');
+  const res = await vercelHttp.get<{ ok: boolean; data: T; error?: string }>(path, { params });
+  if (!res.data.ok) {
+    throw new Error(`Vercel scraper 返回错误: ${res.data.error ?? '未知错误'}`);
+  }
+  return res.data.data;
 }

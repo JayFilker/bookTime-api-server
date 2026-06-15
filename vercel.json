@@ -1,8 +1,9 @@
 {
-  "rewrites": [{ "source": "/api/scrape/(.*)", "destination": "/api/scrape/$1" }],
-  "functions": {
-    "api/scrape/**/*.ts": {
-      "maxDuration": 30
+  "builds": [
+    {
+      "src": "api/scrape/**/*.ts",
+      "use": "@vercel/node",
+      "config": { "maxDuration": 30 }
     }
-  }
+  ]
 }
