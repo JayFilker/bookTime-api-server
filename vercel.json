@@ -1,0 +1,8 @@
+{
+  "rewrites": [{ "source": "/api/scrape/(.*)", "destination": "/api/scrape/$1" }],
+  "functions": {
+    "api/scrape/**/*.ts": {
+      "maxDuration": 30
+    }
+  }
+}

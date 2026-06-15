@@ -5,6 +5,9 @@ import { HttpsProxyAgent } from 'https-proxy-agent';
 export const BASE_URL = 'https://www.bqge.org';
 const MOBILE_BASE_URL = 'http://m.bqge.org';
 
+// 通过 Vercel 中转时的基础 URL（在 Render 环境变量中配置）
+const VERCEL_BASE_URL = process.env.VERCEL_SCRAPER_URL;
+
 const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy;
 const proxyAgent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
 
@@ -42,6 +45,8 @@ function createHttp(baseURL: string, headers: Record<string, string>): AxiosInst
 
 const desktopHttp = createHttp(BASE_URL, DESKTOP_HEADERS);
 const mobileHttp = createHttp(MOBILE_BASE_URL, MOBILE_HEADERS);
+// 用于调 Vercel 中转接口（不需要代理，走公网即可）
+const vercelHttp = VERCEL_BASE_URL ? axios.create({ baseURL: VERCEL_BASE_URL, timeout: 30000 }) : null;
 
 export async function fetchHtml(url: string, method: 'get' | 'post' = 'get', data?: string): Promise<cheerio.CheerioAPI> {
   const res = method === 'post'
@@ -58,4 +63,17 @@ export async function fetchMobileHtml(url: string): Promise<cheerio.CheerioAPI> 
 export async function fetchMobileRaw(url: string): Promise<string> {
   const res = await mobileHttp.get<string>(url);
   return res.data;
+}
+
+// 通过 Vercel 中转获取数据，失败时降级直连
+export async function fetchViaVercel<T>(path: string, params?: Record<string, string>): Promise<T> {
+  if (vercelHttp) {
+    try {
+      const res = await vercelHttp.get<{ ok: boolean; data: T }>(path, { params });
+      if (res.data.ok) return res.data.data;
+    } catch {
+      // 降级直连
+    }
+  }
+  throw new Error('Vercel scraper not configured');
 }
