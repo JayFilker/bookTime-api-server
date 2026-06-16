@@ -3,7 +3,8 @@ import path from 'path';
 import { Book } from '../types/book.types';
 import { Chapter } from '../types/chapter.types';
 
-const DATA_DIR = path.join(__dirname);
+// __dirname 编译后指向 dist/data/，JSON 文件在 src/data/，用 process.cwd() 定位
+const DATA_DIR = path.join(process.cwd(), 'src', 'data');
 
 interface ChapterContent {
   bookId: string;
