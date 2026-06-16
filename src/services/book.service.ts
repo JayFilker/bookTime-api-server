@@ -111,7 +111,7 @@ export const getBooks = async (query: BookListQuery): Promise<{ list: Book[]; to
 
   if (IS_PROD) {
     const all = store.getAllBooks();
-    const filtered = query.category ? all.filter(b => b.category === query.category) : all;
+    const filtered = query.category ? all.filter((b: Book) => b.category === query.category) : all;
     const start = (page - 1) * pageSize;
     return { list: filtered.slice(start, start + pageSize), total: filtered.length, page, pageSize };
   }
