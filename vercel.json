@@ -1,0 +1,10 @@
+{
+  "buildCommand": "echo skip",
+  "functions": {
+    "api/scrape/home.ts": { "maxDuration": 30 },
+    "api/scrape/books.ts": { "maxDuration": 30 },
+    "api/scrape/search.ts": { "maxDuration": 30 },
+    "api/scrape/book/[id].ts": { "maxDuration": 30 },
+    "api/scrape/chapter/[bookId]/[chapterId].ts": { "maxDuration": 30 }
+  }
+}
