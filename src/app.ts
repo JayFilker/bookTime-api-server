@@ -10,6 +10,7 @@ import v2Routes from './v2/routes';
 
 const app = express();
 
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
