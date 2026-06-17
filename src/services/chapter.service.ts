@@ -42,7 +42,11 @@ export const getChapterById = async (chapterId: string, bookId: string): Promise
   if (IS_PROD) {
     const data = store.getChapterContent(bookId, chapterId);
     if (!data) throw new Error('章节不存在');
-    return { id: chapterId, bookId, title: data.title, order: 0, content: data.content, prevChapterId: undefined, nextChapterId: undefined };
+    const allChapters = store.getChaptersByBookId(bookId);
+    const idx = allChapters.findIndex(c => c.id === chapterId);
+    const prevChapterId = idx > 0 ? allChapters[idx - 1].id : undefined;
+    const nextChapterId = idx >= 0 && idx < allChapters.length - 1 ? allChapters[idx + 1].id : undefined;
+    return { id: chapterId, bookId, title: data.title, order: idx + 1, content: data.content, prevChapterId, nextChapterId };
   }
 
   const cacheKey = `chapter:${bookId}:${chapterId}`;
